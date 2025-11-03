@@ -1,45 +1,47 @@
-"use server"
-import { prisma } from "@/lib/prisma";
+// app/api/auth/clerk/route.ts
+import { prisma } from "@/lib/db";
 import { Webhook } from "svix";
 import { headers } from "next/headers";
+import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
+  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET!;
+  if (!WEBHOOK_SECRET)
+    return new Response("Missing Clerk webhook secret", { status: 500 });
+
   const payload = await req.text();
-  const headerPayload = await headers();
-  const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
+  const headerPayload = Object.fromEntries((await headers()).entries());
 
-  type ClerkEvent = {
-    type: string;
-    data: {
-      id: string;
-      email_addresses: { email_address: string }[];
-      first_name?: string | null;
-      last_name?: string | null;
-    };
-  };
+  const wh = new Webhook(WEBHOOK_SECRET);
 
-  let evt: ClerkEvent;
+  let evt: any;
   try {
-    evt = wh.verify(payload, {
-      "svix-id": headerPayload.get("svix-id")!,
-      "svix-timestamp": headerPayload.get("svix-timestamp")!,
-      "svix-signature": headerPayload.get("svix-signature")!,
-    }) as ClerkEvent;
+    evt = wh.verify(payload, headerPayload);
   } catch (err) {
+    console.error("Invalid Clerk webhook signature:", err);
     return new Response("Invalid signature", { status: 400 });
   }
 
-  const { id, email_addresses, first_name, last_name } = evt.data;
+  const { type, data } = evt;
 
-  if (evt.type === "user.created") {
-    await prisma.user.create({
-      data: {
-        clerkId: id,
-        email: email_addresses[0].email_address,
-        name: `${first_name || ""} ${last_name || ""}`.trim(),
+  // Handle user creation and update
+  if (type === "user.created" || type === "user.updated") {
+    const user = data as any;
+    const email = user.email_addresses?.[0]?.email_address;
+    await prisma.user.upsert({
+      where: { clerkId: user.id },
+      update: {
+        email,
+        name: `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim(),
+      },
+      create: {
+        clerkId: user.id,
+        email,
+        name: `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim(),
+        password: randomUUID(),
       },
     });
   }
 
-  return new Response("OK");
+  return new Response("OK", { status: 200 });
 }
