@@ -9,13 +9,13 @@ interface UserHeaderProps {
 
 export default function UserHeader({ firstName, email }: UserHeaderProps) {
   return (
-    <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-md">
-        <h1 className="text-2xl font-bold text-gray-800">
+    <div className='mt-8'>
+        {/* <h1 className="text-2xl font-bold text-gray-800">
             Hello, {firstName}
-        </h1>
+        </h1> */}
         <div className="flex items-center space-x-4">
             <span className="text-sm font-medium text-gray-500 hidden sm:inline">
-                {email}
+                {firstName}
             </span>
             {/* Clerk's UserButton is a client-side component */}
             <UserButton afterSignOutUrl="/" />

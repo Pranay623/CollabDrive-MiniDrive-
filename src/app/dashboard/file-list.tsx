@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Image, Code, Folder, Settings, Trash2, Download, Search, RefreshCw, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 interface FileItem {
   id: string;
@@ -126,10 +127,16 @@ export default function FileList() {
                 const { icon: Icon, color } = fileTypeMap[fileType] || fileTypeMap['application/pdf'];
                 return (
                   <div key={file.id} className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition items-center">
-                    <div className="col-span-5 flex items-center space-x-3 truncate">
+                    <Link
+                      href={`/dashboard/preview/${file.id}`}
+                      className="col-span-5 flex items-center space-x-3 truncate hover:underline"
+                    >
                       <Icon className={`w-5 h-5 ${color} shrink-0`} />
-                      <span className="font-medium text-gray-800 truncate">{file.name}</span>
-                    </div>
+                      <span className="font-medium text-gray-800 truncate">
+                        {file.name}
+                      </span>
+                    </Link>
+
                     <div className="col-span-2 text-sm text-gray-600 hidden sm:block">
                       {file.mimeType || 'Unknown'}
                     </div>
